@@ -404,6 +404,41 @@ describe("dashboard", () => {
     );
   });
 
+  test("does not let a one-second probe burst outvote sustained traffic", async () => {
+    const data = response();
+    data.touch.servers.push({ ...server("Fast"), id: 2 });
+    data.touch.connectedServer = [
+      { _type: "server", id: 1 },
+      { _type: "server", id: 2 },
+    ];
+    vi.mocked(getTouch).mockResolvedValue(data);
+    wrapper = mountWithApp(DashboardView);
+    await flushPromises();
+    // member 1 carries a little every second; member 2 gets one 500KB
+    // observatory probe burst in the middle of the window
+    for (let i = 0; i < 10; i++) {
+      useTraffic().feed({
+        type: "traffic",
+        body: {
+          up: 10,
+          down: 100,
+          upTotal: 0,
+          downTotal: 0,
+          active: [
+            { which: { _type: "server", id: 1 }, up: 10, down: 100 },
+            ...(i === 3
+              ? [{ which: { _type: "server", id: 2 }, up: 10, down: 500000 }]
+              : []),
+          ],
+        },
+      });
+      await flushPromises();
+    }
+    // the sustained member wins on seconds, not on bytes
+    expect(wrapper.get(".dashboard-connection").text()).toContain("Standalone");
+    expect(wrapper.get(".dashboard-connection").text()).not.toContain("Fast");
+  });
+
   test("labels the automatic pick after the group's download strategy", async () => {
     vi.mocked(getOutbound).mockResolvedValue({
       setting: { probeURL: "", probeInterval: "", type: "leastpingdl" },

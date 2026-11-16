@@ -120,11 +120,11 @@ export function useDashboard() {
   const nodeInUse = computed(() => {
     const pinned = members.value.find((member) => member.which.selected);
     if (pinned) return pinned;
-    // the member the traffic actually egresses through, busiest first in the
-    // feed; the observatory's best is only the guess for an idle network
-    const active = traffic.active.value.find(
-      (entry) => entry.up + entry.down > 0,
-    );
+    // the member the traffic actually egresses through: the one that
+    // carried traffic in the most of the last seconds, so an observatory
+    // probe burst cannot outvote sustained traffic; the observatory's best
+    // is only the guess for an idle network
+    const active = traffic.busiest.value;
     if (active) {
       const member = members.value.find((m) => sameWhich(m.which, active.which));
       if (member) return member;
