@@ -168,6 +168,8 @@ export interface TrafficMessage {
     down: number;
     upTotal: number;
     downTotal: number;
+    /** member outbounds that carried traffic since the last one-second sample, busiest first for the reader */
+    active?: { which: Which; up: number; down: number }[];
   };
 }
 export type WsMessage = { type: string; body?: unknown };

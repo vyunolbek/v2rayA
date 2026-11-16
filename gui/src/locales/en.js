@@ -61,6 +61,7 @@ export default {
     proxyGroup: "Proxy group",
     editGroup: "Add or remove nodes",
     autoFastest: "Auto (lowest latency)",
+    autoFastestDownload: "Auto (fastest download)",
     emptyGroup: "This group has no nodes",
     updateAll: "Update all",
     updatedAt: "Updated {time}",

@@ -61,16 +61,14 @@ func TestTrafficCounterRates(t *testing.T) {
 			&statscommand.Stat{Name: "outbound>>>" + tag + ">>>traffic>>>downlink", Value: 9000},
 		)
 	}
-	if got := counter.sample(stats, now); got != (trafficSample{UpTotal: 1000, DownTotal: 2000}) {
+	if got := counter.sample(stats, now); got.Up != 0 || got.Down != 0 || got.UpTotal != 1000 || got.DownTotal != 2000 {
 		t.Fatalf("first sample = %+v, want zero rates and totals 1000/2000", got)
 	}
 	stats[0].Value += 100
 	stats[1].Value += 200
 	stats[2].Value += 200
 	stats[3].Value += 400
-	if got := counter.sample(stats, now.Add(2500*time.Millisecond)); got != (trafficSample{
-		Up: 120, Down: 240, UpTotal: 1300, DownTotal: 2600,
-	}) {
+	if got := counter.sample(stats, now.Add(2500*time.Millisecond)); got.Up != 120 || got.Down != 240 || got.UpTotal != 1300 || got.DownTotal != 2600 {
 		t.Fatalf("second sample = %+v, want rates 120/240 and totals 1300/2600", got)
 	}
 }
@@ -84,13 +82,11 @@ func TestTrafficCounterReset(t *testing.T) {
 	}
 	counter.sample(stats, now)
 	stats[0].Value, stats[1].Value = 10, 20
-	if got := counter.sample(stats, now.Add(time.Second)); got != (trafficSample{UpTotal: 10, DownTotal: 20}) {
+	if got := counter.sample(stats, now.Add(time.Second)); got.Up != 0 || got.Down != 0 || got.UpTotal != 10 || got.DownTotal != 20 {
 		t.Fatalf("reset sample = %+v, want zero rates and totals 10/20", got)
 	}
 	stats[0].Value, stats[1].Value = 30, 60
-	if got := counter.sample(stats, now.Add(2*time.Second)); got != (trafficSample{
-		Up: 20, Down: 40, UpTotal: 30, DownTotal: 60,
-	}) {
+	if got := counter.sample(stats, now.Add(2*time.Second)); got.Up != 20 || got.Down != 40 || got.UpTotal != 30 || got.DownTotal != 60 {
 		t.Fatalf("sample after reset = %+v, want rates 20/40 and totals 30/60", got)
 	}
 }
@@ -143,5 +139,31 @@ func TestTrafficProducerPublishesStats(t *testing.T) {
 		}
 	case <-time.After(5 * ApiFeedInterval):
 		t.Fatal("no traffic frame received")
+	}
+}
+
+func TestActiveOutboundsMapsTagsToConnectedServers(t *testing.T) {
+	refs := configure.NodeRefs{}
+	refs.Add(configure.NodeRef{TYPE: configure.ServerType, ID: 1, Outbound: "proxy"})
+	refs.Add(configure.NodeRef{TYPE: configure.ServerType, ID: 2, Outbound: "proxy"})
+	if err := configure.OverwriteConnects(&refs); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = configure.ClearConnects("proxy") })
+	p := &Process{tag2WhichIndex: map[string]int{"『A』": 0, "『B』": 1}}
+	active := activeOutbounds(p, map[string]tagRate{
+		"『A』": {Up: 100, Down: 200},
+		"『B』": {Up: 10, Down: 20},
+		"『X』": {Up: 5, Down: 5}, // not in the template: dropped
+	})
+	if len(active) != 2 {
+		t.Fatalf("active = %+v, want the two mapped members", active)
+	}
+	// busiest first, so the reader can take the head
+	if active[0].Which.ID != 1 || active[0].Up != 100 || active[0].Down != 200 {
+		t.Fatalf("active[0] = %+v, want member 1 with rates 100/200", active[0])
+	}
+	if active[1].Which.ID != 2 || active[1].Up != 10 || active[1].Down != 20 {
+		t.Fatalf("active[1] = %+v, want member 2 with rates 10/20", active[1])
 	}
 }

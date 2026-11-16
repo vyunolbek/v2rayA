@@ -61,6 +61,7 @@ export default {
     proxyGroup: "Группа прокси",
     editGroup: "Добавить или удалить узлы",
     autoFastest: "Авто (минимальная задержка)",
+    autoFastestDownload: "Авто (наибольшая скорость)",
     emptyGroup: "В этой группе нет узлов",
     updateAll: "Обновить все",
     updatedAt: "Обновлено {time}",

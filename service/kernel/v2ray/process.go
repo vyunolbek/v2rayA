@@ -68,15 +68,15 @@ func NewProcess(tmpl *Template,
 	if tmpl.Setting != nil && tmpl.DnsModuleConfig != nil {
 		log.Info("DNS module config written to v2raya-core config")
 	}
-	if tmpl.MultiObservatory != nil {
-		// NOTICE: tag2WhichIndex is reliable because once connected servers are changed when v2ray is running,
-		// the func UpdateV2RayConfig should be invoked and tag2WhichIndex will be regenerated.
-		tag2WhichIndex := make(map[string]int)
-		for i, tag := range tmpl.OutboundTags {
-			tag2WhichIndex[tag] = i
-		}
-		process.tag2WhichIndex = tag2WhichIndex
+	// NOTICE: tag2WhichIndex is reliable because once connected servers are changed when v2ray is running,
+	// the func UpdateV2RayConfig should be invoked and tag2WhichIndex will be regenerated.
+	// The observatory feed and the traffic feed both map outbound tags back to
+	// connected servers through it.
+	tag2WhichIndex := make(map[string]int)
+	for i, tag := range tmpl.OutboundTags {
+		tag2WhichIndex[tag] = i
 	}
+	process.tag2WhichIndex = tag2WhichIndex
 	err = WriteV2rayConfig(tmpl.ToConfigBytes())
 	if err != nil {
 		return nil, err

@@ -1,8 +1,10 @@
 package v2ray
 
 import (
+	"cmp"
 	"context"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -159,15 +161,34 @@ type trafficSample struct {
 	Down      float64 `json:"down"`
 	UpTotal   int64   `json:"upTotal"`
 	DownTotal int64   `json:"downTotal"`
+	// Active lists the member outbounds that carried traffic since the last
+	// sample, mapped back to the connected servers they belong to, so the
+	// dashboard can show the node the traffic actually egresses through.
+	Active []activeOutbound `json:"active,omitempty"`
+	byTag  map[string]tagRate
+}
+
+type tagRate struct {
+	Up   float64
+	Down float64
+}
+
+// activeOutbound is a member outbound with traffic since the last sample.
+type activeOutbound struct {
+	Which *configure.Which `json:"which"`
+	Up    float64          `json:"up"`
+	Down  float64          `json:"down"`
 }
 
 type trafficCounter struct {
 	up, down int64
+	byTag    map[string][2]int64
 	at       time.Time
 }
 
 func (c *trafficCounter) sample(stats []*statscommand.Stat, now time.Time) trafficSample {
 	var sample trafficSample
+	totals := make(map[string][2]int64)
 	for _, stat := range stats {
 		name := stat.GetName()
 		if !strings.HasPrefix(name, "outbound>>>") {
@@ -184,8 +205,10 @@ func (c *trafficCounter) sample(stats []*statscommand.Stat, now time.Time) traff
 		switch direction {
 		case "uplink":
 			sample.UpTotal += stat.GetValue()
+			totals[tag] = [2]int64{stat.GetValue(), totals[tag][1]}
 		case "downlink":
 			sample.DownTotal += stat.GetValue()
+			totals[tag] = [2]int64{totals[tag][0], stat.GetValue()}
 		}
 	}
 	if elapsed := now.Sub(c.at).Seconds(); !c.at.IsZero() && elapsed > 0 {
@@ -196,9 +219,53 @@ func (c *trafficCounter) sample(stats []*statscommand.Stat, now time.Time) traff
 		if sample.DownTotal >= c.down {
 			sample.Down = float64(sample.DownTotal-c.down) / elapsed
 		}
+		// A member whose counters grew since the last sample is carrying
+		// traffic; reset counters drop out as non-positive deltas.
+		for tag, total := range totals {
+			prev, ok := c.byTag[tag]
+			if !ok {
+				continue // first sight of the tag: no delta yet
+			}
+			up, down := total[0]-prev[0], total[1]-prev[1]
+			if up <= 0 && down <= 0 {
+				continue
+			}
+			if sample.byTag == nil {
+				sample.byTag = make(map[string]tagRate)
+			}
+			sample.byTag[tag] = tagRate{Up: float64(up) / elapsed, Down: float64(down) / elapsed}
+		}
 	}
 	c.up, c.down, c.at = sample.UpTotal, sample.DownTotal, now
+	c.byTag = totals
 	return sample
+}
+
+// activeOutbounds maps the member tags that carried traffic to the connected
+// servers the running template was built from. Tags outside the template
+// (closed over a restart) have no mapping and are dropped.
+func activeOutbounds(p *Process, byTag map[string]tagRate) []activeOutbound {
+	if p == nil || len(byTag) == 0 {
+		return nil
+	}
+	css := configure.GetConnectedServers()
+	active := make([]activeOutbound, 0, len(byTag))
+	for tag, rate := range byTag {
+		index, ok := p.tag2WhichIndex[tag]
+		if !ok || index < 0 || index >= css.Len() {
+			continue
+		}
+		active = append(active, activeOutbound{
+			Which: &configure.Which{NodeRef: *css.Get()[index]},
+			Up:    rate.Up,
+			Down:  rate.Down,
+		})
+	}
+	// busiest first, so the reader can take the head
+	slices.SortFunc(active, func(a, b activeOutbound) int {
+		return cmp.Compare(b.Up+b.Down, a.Up+a.Down)
+	})
+	return active
 }
 
 // TrafficProducer publishes outbound byte totals and rates until its close function is called.
@@ -251,7 +318,9 @@ func TrafficProducer(apiPort int) (closeFunc func()) {
 				log.Warn("TrafficProducer: %v", err)
 				continue
 			}
-			ApiFeed.ProductMessage("traffic", counter.sample(response.GetStat(), time.Now()))
+			sample := counter.sample(response.GetStat(), time.Now())
+			sample.Active = activeOutbounds(ProcessManager.Process(), sample.byTag)
+			ApiFeed.ProductMessage("traffic", sample)
 		}
 	}()
 	return cancel

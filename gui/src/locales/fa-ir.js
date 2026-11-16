@@ -60,6 +60,7 @@ export default {
     proxyGroup: "گروه پروکسی",
     editGroup: "افزودن یا حذف گره‌ها",
     autoFastest: "خودکار (کمترین تأخیر)",
+    autoFastestDownload: "خودکار (سریع‌ترین دانلود)",
     emptyGroup: "این گروه گره‌ای ندارد",
     updateAll: "به‌روزرسانی همه",
     updatedAt: "به‌روزرسانی {time}",

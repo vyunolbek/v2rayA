@@ -57,6 +57,7 @@ export default {
     proxyGroup: "代理组",
     editGroup: "增删节点",
     autoFastest: "自动（延迟最低）",
+    autoFastestDownload: "自动（下载最快）",
     emptyGroup: "此分组没有节点",
     updateAll: "全部更新",
     updatedAt: "更新于 {time}",

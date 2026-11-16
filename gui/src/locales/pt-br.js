@@ -61,6 +61,7 @@ export default {
     proxyGroup: "Grupo de proxy",
     editGroup: "Adicionar ou remover nós",
     autoFastest: "Automático (menor latência)",
+    autoFastestDownload: "Automático (download mais rápido)",
     emptyGroup: "Este grupo não tem nós",
     updateAll: "Atualizar todas",
     updatedAt: "Atualizado {time}",

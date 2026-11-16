@@ -8,6 +8,7 @@ import {
   getSetting,
   getTouch,
   postV2ray,
+  getOutbound,
   getPorts,
   putSetting,
   putOutboundConnections,
@@ -18,6 +19,7 @@ import {
 import { watchConnected } from "@/api/connect";
 import type { TouchResponse, TouchServer } from "@/api/types";
 import { loadingState } from "@/composables/useLoading";
+import { useTraffic } from "@/composables/useTraffic";
 import { closeAllNotices, noticeState } from "@/composables/useNotify";
 import {
   closeAllDialogs,
@@ -42,6 +44,7 @@ vi.mock("@/api", async (original) => ({
   putOutboundConnections: vi.fn(),
   getPingLatency: vi.fn(),
   putSubscription: vi.fn(),
+  getOutbound: vi.fn(),
 }));
 vi.mock("@/api/connect", () => ({
   watchConnected: vi.fn((request: Promise<TouchResponse>) => request),
@@ -114,6 +117,9 @@ beforeEach(() => {
   // the tile pings the members once on arrival; a test that wants a
   // result arranges it after the mount
   vi.mocked(getPingLatency).mockResolvedValue({ whiches: [] });
+  vi.mocked(getOutbound).mockResolvedValue({
+    setting: { probeURL: "", probeInterval: "", type: "leastping" },
+  });
   vi.mocked(getTouch).mockResolvedValue(response());
   vi.mocked(getSetting).mockResolvedValue({
     setting: {
@@ -131,6 +137,8 @@ beforeEach(() => {
 afterEach(() => {
   wrapper?.unmount();
   closeAllDialogs();
+  // the traffic feed is a shared instance; clear its frames between tests
+  useTraffic().reset();
 });
 
 describe("dashboard", () => {
@@ -354,6 +362,62 @@ describe("dashboard", () => {
       which: null,
     });
     expect(wrapper.get(".dashboard-connection").text()).not.toContain("Pinned");
+  });
+
+  test("shows the member the traffic actually egresses through", async () => {
+    const data = response();
+    data.touch.servers.push({ ...server("Fast"), id: 2 });
+    data.touch.connectedServer = [
+      { _type: "server", id: 1 },
+      { _type: "server", id: 2 },
+    ];
+    vi.mocked(getTouch).mockResolvedValue(data);
+    wrapper = mountWithApp(DashboardView);
+    await flushPromises();
+    const store = useAppStore();
+    store.observatory.proxy = [1, 2].map((id) => ({
+      which: { _type: "server", id },
+      alive: true,
+      delay: id === 1 ? 10 : 200,
+      outbound_tag: "",
+      last_seen_time: 0,
+      last_try_time: 0,
+    }));
+    await flushPromises();
+    // without traffic the observatory's best shows
+    expect(wrapper.get(".dashboard-connection").text()).toContain("Standalone");
+    // the traffic feed names the member the bytes really leave through
+    useTraffic().feed({
+      type: "traffic",
+      body: {
+        up: 10,
+        down: 20,
+        upTotal: 0,
+        downTotal: 0,
+        active: [{ which: { _type: "server", id: 2 }, up: 10, down: 20 }],
+      },
+    });
+    await flushPromises();
+    expect(wrapper.get(".dashboard-connection").text()).toContain("Fast");
+    expect(wrapper.get(".dashboard-connection").text()).not.toContain(
+      "Standalone",
+    );
+  });
+
+  test("labels the automatic pick after the group's download strategy", async () => {
+    vi.mocked(getOutbound).mockResolvedValue({
+      setting: { probeURL: "", probeInterval: "", type: "leastpingdl" },
+    });
+    wrapper = mountWithApp(DashboardView);
+    await flushPromises();
+    await wrapper
+      .get(".dashboard-connection .dashboard-node-name")
+      .trigger("click");
+    await flushPromises();
+    const auto = [
+      ...document.querySelectorAll('[role="menuitemradio"]'),
+    ][0];
+    expect(auto.textContent).toContain("Auto (fastest download)");
   });
 
   test("autosaves the whole form from a quick control", async () => {

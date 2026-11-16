@@ -111,6 +111,10 @@ export const getOutbounds = () =>
 export interface OutboundSetting {
   probeURL: string;
   probeInterval: string;
+  /** probes per sampling window; 0 keeps the core default (10) */
+  probeSampling?: number;
+  /** Go duration of one probe; empty keeps the core default (5s) */
+  probeTimeout?: string;
   type: string;
   /** the share link of the member routed through alone; empty balances */
   selected?: string;

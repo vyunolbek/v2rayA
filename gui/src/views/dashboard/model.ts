@@ -1,9 +1,11 @@
-import { computed, onMounted, ref, shallowRef } from "vue";
+import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import dayjs from "dayjs";
 import "@/plugins/dayjs";
+import { useTraffic } from "@/composables/useTraffic";
 import {
   deleteV2ray,
+  getOutbound,
   getPingLatency,
   getTouch,
   postV2ray,
@@ -65,6 +67,7 @@ export function useDashboard() {
   const notify = useNotify();
   const subscriptionBypass = useSubscriptionBypass();
   const settings = useSettings();
+  const traffic = useTraffic();
   const touch = shallowRef<Touch>();
   const loading = ref(true);
   const busy = ref(false);
@@ -117,6 +120,15 @@ export function useDashboard() {
   const nodeInUse = computed(() => {
     const pinned = members.value.find((member) => member.which.selected);
     if (pinned) return pinned;
+    // the member the traffic actually egresses through, busiest first in the
+    // feed; the observatory's best is only the guess for an idle network
+    const active = traffic.active.value.find(
+      (entry) => entry.up + entry.down > 0,
+    );
+    if (active) {
+      const member = members.value.find((m) => sameWhich(m.which, active.which));
+      if (member) return member;
+    }
     let best: DashboardMember | undefined;
     for (const member of members.value) {
       if (
@@ -261,8 +273,20 @@ export function useDashboard() {
     await getTouch().then(apply).catch(report);
   }
 
+  /** the balancing strategy the group settings chose; labels the auto pick */
+  const groupType = ref("leastping");
+  async function loadGroupType() {
+    try {
+      const { setting } = await getOutbound(store.outboundName);
+      groupType.value = setting.type || "leastping";
+    } catch {
+      // the default label stays; a settings fetch failure is not visible here
+    }
+  }
+  watch(() => store.outboundName, loadGroupType);
+
   onMounted(async () => {
-    await Promise.all([sync(), loadQuick()]);
+    await Promise.all([sync(), loadQuick(), loadGroupType()]);
     loading.value = false;
     // the members' latency once on arrival, so the tile reads at a glance
     void testMembers();
@@ -468,6 +492,7 @@ export function useDashboard() {
     error,
     members,
     nodeInUse,
+    groupType,
     editPorts,
     editRoutingA,
     editGroup,

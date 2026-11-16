@@ -59,6 +59,7 @@ export default {
     proxyGroup: "프록시 그룹",
     editGroup: "노드 추가/삭제",
     autoFastest: "자동 (최저 지연 시간)",
+    autoFastestDownload: "자동 (최고 다운로드 속도)",
     emptyGroup: "이 그룹에 노드가 없습니다",
     updateAll: "모두 업데이트",
     updatedAt: "업데이트: {time}",

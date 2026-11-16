@@ -44,6 +44,7 @@ const {
   error,
   members,
   nodeInUse,
+  groupType,
   stateLabel,
   canToggle,
   quick,
@@ -111,12 +112,18 @@ const slowest = computed(() =>
   Math.max(1, ...members.value.map((member) => member.ms ?? 0)),
 );
 
+// the auto pick's label names the strategy the group settings chose
+const autoTitle = computed(() =>
+  groupType.value === "leastpingdl"
+    ? t("dashboard.autoFastestDownload")
+    : t("dashboard.autoFastest"),
+);
 // the node picker: "auto" or one member's key; picking calls selectNode
 const selectionValue = computed(
   () => members.value.find((m) => m.which.selected)?.key ?? "auto",
 );
 const selectionItems = computed(() => [
-  { value: "auto", title: t("dashboard.autoFastest"), subtitle: "" },
+  { value: "auto", title: autoTitle.value, subtitle: "" },
   ...members.value.map((m) => ({
     value: m.key,
     title: m.row.name || m.row.address,
@@ -251,7 +258,7 @@ defineExpose({ sync });
                 <span class="md3-title-medium dashboard-wrap" dir="auto">{{
                   nodeInUse
                     ? nodeInUse.row.name || nodeInUse.row.address
-                    : t("dashboard.autoFastest")
+                    : autoTitle
                 }}</span>
               </v-btn>
             </template>
