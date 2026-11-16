@@ -42,11 +42,23 @@ func (t *Template) SetAPI(serverData *ServerData) (port int, err error) {
 			}
 
 			//TODO: random, leastload
-			strategy := serverData.OutboundName2Setting[outbound].Type
+			strategy, method := serverData.OutboundName2Setting[outbound].Type.StrategyAndMethod()
 			interval, err := time.ParseDuration(serverData.OutboundName2Setting[outbound].ProbeInterval)
 			if err != nil {
 				log.Warn("observatory: %v", err)
 				interval = 10 * time.Second
+			}
+			timeout := serverData.OutboundName2Setting[outbound].ProbeTimeout
+			if timeout != "" {
+				if _, err := time.ParseDuration(timeout); err != nil {
+					log.Warn("observatory: invalid probe timeout %q: %v", timeout, err)
+					timeout = ""
+				}
+			}
+			sampling := serverData.OutboundName2Setting[outbound].ProbeSampling
+			if sampling < 0 {
+				log.Warn("observatory: negative probe sampling %d ignored", sampling)
+				sampling = 0
 			}
 			var selector []string
 
@@ -58,14 +70,14 @@ func (t *Template) SetAPI(serverData *ServerData) (port int, err error) {
 				Tag:      outbound,
 				Selector: selector,
 				Strategy: coreObj.BalancerStrategy{
-					Type: strategy.String(),
+					Type: strategy,
 					Settings: &coreObj.StrategySettings{
 						ObserverTag: outbound,
 					},
 				},
 			})
 
-			if strings.ToLower(strategy.String()) == "leastping" {
+			if strings.ToLower(strategy) == "leastping" {
 				probeUrl := serverData.OutboundName2Setting[outbound].ProbeURL
 				if _, err := url.Parse(probeUrl); err != nil {
 					log.Warn("observatory: %v", err)
@@ -81,8 +93,11 @@ func (t *Template) SetAPI(serverData *ServerData) (port int, err error) {
 					Settings: coreObj.Observatory{
 						SubjectSelector: selector,
 						PingConfig: &coreObj.PingConfig{
-							Destination: probeUrl,
-							Interval:    interval.String(),
+							Destination:   probeUrl,
+							Interval:      interval.String(),
+							SamplingCount: sampling,
+							Timeout:       timeout,
+							HTTPMethod:    method,
 						},
 						// the core's loader reads these flat fields too (core/hint/conf/loader.go)
 						ProbeURL:      probeUrl,

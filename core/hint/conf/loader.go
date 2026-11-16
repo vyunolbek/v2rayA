@@ -403,6 +403,10 @@ func injectBurstObservatoryAsMulti(coreConfig *xray_core.Config, burst *burstObs
 	if burst.PingConfig != nil {
 		observer.ProbeUrl = burst.PingConfig.Destination
 		observer.ProbeInterval = int64(burst.PingConfig.Interval)
+		observer.HttpMethod = burst.PingConfig.HTTPMethod
+		observer.SamplingCount = int32(burst.PingConfig.SamplingCount)
+		observer.Timeout = int64(burst.PingConfig.Timeout)
+		observer.Connectivity = burst.PingConfig.Connectivity
 	}
 	cfg := &multiobs.Config{Observers: []*multiobs.ObserverConfig{observer}}
 	coreConfig.App = append(coreConfig.App, serial.ToTypedMessage(cfg))
@@ -413,6 +417,9 @@ func normalizeObserverConfig(e multiObsEntryJSON) *multiobs.ObserverConfig {
 	subjectSelector := e.SubjectSelector
 	probeURL := e.ProbeURL
 	probeInterval := e.ProbeInterval
+	var httpMethod, connectivity string
+	var samplingCount int
+	var timeout xray_cfgdur.Duration
 
 	if e.Settings != nil {
 		if len(subjectSelector) == 0 {
@@ -431,6 +438,10 @@ func normalizeObserverConfig(e multiObsEntryJSON) *multiobs.ObserverConfig {
 			if probeInterval == 0 {
 				probeInterval = e.Settings.PingConfig.Interval
 			}
+			httpMethod = e.Settings.PingConfig.HTTPMethod
+			samplingCount = e.Settings.PingConfig.SamplingCount
+			timeout = e.Settings.PingConfig.Timeout
+			connectivity = e.Settings.PingConfig.Connectivity
 		}
 	}
 
@@ -445,6 +456,18 @@ func normalizeObserverConfig(e multiObsEntryJSON) *multiobs.ObserverConfig {
 			if probeInterval == 0 {
 				probeInterval = e.Burst.PingConfig.Interval
 			}
+			if httpMethod == "" {
+				httpMethod = e.Burst.PingConfig.HTTPMethod
+			}
+			if samplingCount == 0 {
+				samplingCount = e.Burst.PingConfig.SamplingCount
+			}
+			if timeout == 0 {
+				timeout = e.Burst.PingConfig.Timeout
+			}
+			if connectivity == "" {
+				connectivity = e.Burst.PingConfig.Connectivity
+			}
 		}
 	}
 
@@ -457,6 +480,10 @@ func normalizeObserverConfig(e multiObsEntryJSON) *multiobs.ObserverConfig {
 		ProbeUrl:        probeURL,
 		ProbeInterval:   int64(probeInterval),
 		SubjectSelector: subjectSelector,
+		HttpMethod:      httpMethod,
+		SamplingCount:   int32(samplingCount),
+		Timeout:         int64(timeout),
+		Connectivity:    connectivity,
 	}
 }
 

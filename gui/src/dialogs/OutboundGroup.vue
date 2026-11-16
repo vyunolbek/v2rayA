@@ -16,6 +16,8 @@ const notify = useNotify();
 const setting = reactive<OutboundSetting>({
   probeURL: "",
   probeInterval: "",
+  probeSampling: 0,
+  probeTimeout: "",
   type: "leastping",
 });
 const form = ref<{ validate(): Promise<{ valid: boolean }> } | null>(null);
@@ -34,7 +36,13 @@ async function save() {
   if (check && !check.valid) return;
   saving.value = true;
   try {
-    await putOutbound({ outbound: props.outbound, setting: { ...setting } });
+    // v-model.number leaves an empty string in a cleared field; the
+    // service expects a number (0 keeps the core's default).
+    const probeSampling = Number(setting.probeSampling) || 0;
+    await putOutbound({
+      outbound: props.outbound,
+      setting: { ...setting, probeSampling },
+    });
     notify.success(t("outbound.settingSaved"));
     emit("close", true);
   } catch (err) {
@@ -75,8 +83,25 @@ async function save() {
           v-model="setting.type"
           :items="[
             { value: 'leastping', title: t('setting.options.leastPing') },
+            {
+              value: 'leastpingdl',
+              title: t('setting.options.leastPingDownload'),
+            },
           ]"
           :label="t('outbound.type')"
+        />
+        <v-text-field
+          v-model.number="setting.probeSampling"
+          :label="t('outbound.probeSampling')"
+          type="number"
+          min="0"
+          dir="ltr"
+        />
+        <v-text-field
+          v-model="setting.probeTimeout"
+          :label="t('outbound.probeTimeout')"
+          placeholder="5s"
+          dir="ltr"
         />
       </v-form>
     </v-card-text>

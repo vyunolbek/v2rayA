@@ -262,6 +262,7 @@ export default {
       updateGfwlistAtIntervals: "GFWList를 주기적으로 업데이트 (단위: 시간)",
       dependTransparentMode: "투명 프록시/시스템 프록시를 따름",
       leastPing: "최저 지연 우선",
+      leastPingDownload: "다운로드 속도 우선",
       systemProxy: "시스템 프록시",
       tunUnsupported: "이 플랫폼에서는 지원되지 않음",
     },
@@ -629,6 +630,8 @@ export default {
     settingSaveFailed: "프록시 그룹 설정 저장 실패: {message}",
     probeUrl: "탐색 URL",
     probeInterval: "탐색 간격",
+    probeSampling: "윈도당 탐색 횟수",
+    probeTimeout: "탐색 제한 시간",
     type: "유형",
   },
   proxyGroup: {

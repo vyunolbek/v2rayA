@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package xray.core.app.observatory.multiobservatory;
+
+option go_package = "github.com/v2rayA/v2raya-core/hint/app/observatory/multiobservatory";
+
+// ObserverConfig defines a single observatory group with a dedicated balancer tag.
+message ObserverConfig {
+  string tag = 1;
+  string probe_url = 2;
+  int64 probe_interval = 3;
+  repeated string subject_selector = 4;
+  // HTTP method of the probe request. "HEAD" (the default) times the
+  // response headers; "GET" also downloads the body, so the measurement of
+  // a payload URL reflects the throughput, not just the reachability.
+  string http_method = 5;
+  // Probes per sampling window; 0 applies the burst default (10).
+  int32 sampling_count = 6;
+  // Probe timeout in nanoseconds; 0 applies the burst default (5s).
+  int64 timeout = 7;
+  // Connectivity check URL: a failed probe is recorded only while this
+  // direct check succeeds, so a local outage is not mistaken for dead
+  // outbounds. Empty disables the check.
+  string connectivity = 8;
+}
+
+// Config is the top-level multiObservatory feature config.
+// Each Observers entry creates an independent observatory for a balancer group.
+message Config {
+  repeated ObserverConfig observers = 1;
+}

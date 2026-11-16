@@ -270,6 +270,7 @@ export default {
         "Atualizar GFWList regularmente (unidade: hora)",
       dependTransparentMode: "Segue o proxy transparente/proxy do sistema",
       leastPing: "Menor latência primeiro",
+      leastPingDownload: "Download mais rápido primeiro",
       systemProxy: "Proxy do sistema",
       tunUnsupported: "não suportado nesta plataforma",
     },
@@ -647,6 +648,8 @@ export default {
       "Falha ao salvar as configurações do grupo de proxy: {message}",
     probeUrl: "URL de sondagem",
     probeInterval: "Intervalo de sondagem",
+    probeSampling: "Sondagens por janela",
+    probeTimeout: "Tempo limite da sondagem",
     type: "Tipo",
   },
   proxyGroup: {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	multiobs "github.com/v2rayA/v2raya-core/hint/app/observatory/multiobservatory"
 	hint_tunmips "github.com/v2rayA/v2raya-core/hint/proxy/tunmips"
 	xray_proxyman "github.com/xtls/xray-core/app/proxyman"
 	xray_core "github.com/xtls/xray-core/core"
@@ -179,5 +180,48 @@ func TestDocumentWithoutCustomProtocolsIsUntouched(t *testing.T) {
 	}
 	if !bytes.Equal(modified, raw) || !custom.empty() {
 		t.Fatalf("document was rewritten: %s", modified)
+	}
+}
+
+// The download-probing knobs must survive the JSON→ObserverConfig hop: the
+// service writes them into pingConfig, and dropping them would silently
+// turn a "fastest download" group back into header-only probes.
+func TestMultiObservatoryPingKnobsReachTheObserver(t *testing.T) {
+	doc := []byte(`{
+  "outbounds": [{"protocol": "freedom", "tag": "direct"}],
+  "multiObservatory": {
+    "observers": [{
+      "tag": "proxy",
+      "settings": {
+        "subjectSelector": ["a", "b"],
+        "pingConfig": {
+          "destination": "https://speed.cloudflare.com/__down?bytes=40000",
+          "interval": "60s",
+          "httpMethod": "GET",
+          "samplingCount": 3,
+          "timeout": "8s",
+          "connectivity": "https://www.gstatic.com/generate_204"
+        }
+      }
+    }]
+  }
+}`)
+	cfg := loadBothWays(t, doc)
+	var mo *multiobs.Config
+	for _, app := range cfg.App {
+		if inst, err := app.GetInstance(); err == nil {
+			if c, ok := inst.(*multiobs.Config); ok {
+				mo = c
+			}
+		}
+	}
+	if mo == nil || len(mo.Observers) != 1 {
+		t.Fatalf("multiObservatory app = %+v", mo)
+	}
+	obs := mo.Observers[0]
+	if obs.HttpMethod != "GET" || obs.SamplingCount != 3 || obs.Timeout != 8000000000 ||
+		obs.Connectivity != "https://www.gstatic.com/generate_204" ||
+		obs.ProbeUrl != "https://speed.cloudflare.com/__down?bytes=40000" || obs.ProbeInterval != 60000000000 {
+		t.Fatalf("observer = %+v", obs)
 	}
 }

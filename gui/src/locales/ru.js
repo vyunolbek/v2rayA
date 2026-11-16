@@ -267,6 +267,7 @@ export default {
       updateGfwlistAtIntervals: "Регулярно обновлять GFWList (единица: час)",
       dependTransparentMode: "Следовать режиму прозрачного/системного прокси",
       leastPing: "Сначала узлы с наименьшей задержкой",
+      leastPingDownload: "Сначала самые быстрые по скачиванию",
       systemProxy: "Системный прокси",
       tunUnsupported: "не поддерживается на этой платформе",
     },
@@ -640,6 +641,8 @@ export default {
       "Не удалось сохранить настройки группы прокси: {message}",
     probeUrl: "URL проверки",
     probeInterval: "Интервал проверки",
+    probeSampling: "Проверок за окно",
+    probeTimeout: "Таймаут проверки",
     type: "Тип",
   },
   proxyGroup: {

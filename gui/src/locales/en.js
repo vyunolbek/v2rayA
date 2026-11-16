@@ -264,6 +264,7 @@ export default {
       updateGfwlistAtIntervals: "Update GFWList Regularly (Unit: hour)",
       dependTransparentMode: "Follows Transparent Proxy/System Proxy",
       leastPing: "Least Latency First",
+      leastPingDownload: "Fastest Download First",
       systemProxy: "System Proxy",
       tunUnsupported: "not supported on this platform",
     },
@@ -638,6 +639,8 @@ export default {
     settingSaveFailed: "Failed to save proxy group settings: {message}",
     probeUrl: "Probe URL",
     probeInterval: "Probe Interval",
+    probeSampling: "Probes per Window",
+    probeTimeout: "Probe Timeout",
     type: "Type",
   },
   proxyGroup: {

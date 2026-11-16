@@ -92,8 +92,12 @@ func New(ctx context.Context, config *Config) (*MultiObservatory, error) {
 
 	for _, obs := range config.GetObservers() {
 		pingCfg := &burst.HealthPingConfig{
-			Destination: obs.GetProbeUrl(),
-			Interval:    obs.GetProbeInterval(),
+			Destination:   obs.GetProbeUrl(),
+			Interval:      obs.GetProbeInterval(),
+			HttpMethod:    obs.GetHttpMethod(),
+			SamplingCount: obs.GetSamplingCount(),
+			Timeout:       obs.GetTimeout(),
+			Connectivity:  obs.GetConnectivity(),
 		}
 		// Keep legacy 10s probing behavior when interval isn't configured.
 		if pingCfg.Interval == 0 {

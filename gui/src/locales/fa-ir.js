@@ -263,6 +263,7 @@ export default {
       updateGfwlistAtIntervals: "به‌روزرسانی منظم GFWList (واحد: ساعت)",
       dependTransparentMode: "پیروی از پروکسی شفاف/پروکسی سیستم",
       leastPing: "ابتدا کمترین تأخیر",
+      leastPingDownload: "ابتدا سریع‌ترین دانلود",
       systemProxy: "پروکسی سیستم",
       tunUnsupported: "در این سکو پشتیبانی نمی‌شود",
     },
@@ -632,6 +633,8 @@ export default {
     settingSaveFailed: "ذخیره تنظیمات گروه پروکسی ناموفق بود: {message}",
     probeUrl: "نشانی آزمون",
     probeInterval: "فاصله آزمون",
+    probeSampling: "تعداد آزمون در هر پنجره",
+    probeTimeout: "مهلت آزمون",
     type: "نوع",
   },
   proxyGroup: {
